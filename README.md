@@ -9,7 +9,7 @@
 
 ---
 
-![stw-sentinel Isolation Lab](https://diffserv.xyz/og-image.png)
+![stw-sentinel Isolation Lab](docs/lab-screenshot.png)
 
 ---
 
