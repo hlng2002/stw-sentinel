@@ -9,6 +9,10 @@
 
 ---
 
+![stw-sentinel Isolation Lab](https://diffserv.xyz/og-image.png)
+
+---
+
 ## 🇨🇳 中文文档
 
 ### 这是什么？
