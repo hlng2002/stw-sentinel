@@ -9,6 +9,16 @@ When V8 Garbage Collection (Major GC) hits, the main thread freezes. Traditional
 
 `stw-sentinel` leverages `SharedArrayBuffer` and `Atomics` to achieve **zero-copy, lock-free communication** between the AudioWorklet and the main thread. It can survive **700ms+ V8 STW nuclear explosions** without dropping a single audio frame.
 
+## 🔬 Live Lab & Interactive Demo
+
+Seeing is believing. We built a dual-track isolation lab to prove the exact difference between the Main Thread and the AudioWorklet during a V8 Garbage Collection meltdown.
+
+👉 **[Enter the DiffServ Isolation Lab](https://diffserv.xyz/lab)**
+
+*In the lab, you can click the **"Supernova Bomb"** to intentionally overload the V8 Concurrent Marker. You will see the main thread UI completely freeze (700ms+ spikes) while the `stw-sentinel` audio probe maintains a perfectly flat 2.67ms heart rate.*
+
+---
+
 ## 📦 Installation
 
 ```bash
