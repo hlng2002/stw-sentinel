@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STW Sentinel Lab — Dual-Track Contrast</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0D0D0D; color: #E0E0E0; font-family: 'SF Mono', 'Fira Code', monospace; }
+  .container { max-width: 960px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 1.5rem; color: #00FF41; letter-spacing: 2px; }
+  .subtitle { font-size: 0.75rem; color: #888; margin-top: 4px; }
+  .iso-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; }
+  .iso-badge .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot-green { background: #00FF41; }
+  .dot-red { background: #FF003C; }
+
+  /* Status Grid */
+  .status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0; }
+  @media (min-width: 640px) { .status-grid { grid-template-columns: repeat(6, 1fr); } }
+  .status-card { background: #1A1A1A; border: 1px solid #333; border-radius: 8px; padding: 10px; }
+  .status-card .label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  .status-card .value { font-size: 1rem; font-weight: bold; }
+  .val-green { color: #00FF41; }
+  .val-yellow { color: #FFD700; }
+  .val-red { color: #FF003C; }
+
+  /* Canvas */
+  .canvas-wrap { background: #1A1A1A; border: 1px solid #333; border-radius: 8px; padding: 16px; margin: 16px 0; }
+  .canvas-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .canvas-header span { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  .legend { display: flex; gap: 12px; font-size: 10px; }
+  .legend .g { color: #00FF41; }
+  .legend .y { color: #FFD700; }
+  .legend .r { color: #FF003C; }
+  canvas { width: 100%; border-radius: 4px; }
+
+  /* Buttons */
+  .btn-group { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+  .btn { padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 0.85rem; cursor: pointer; border: 1px solid; transition: all 0.15s; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-green { border-color: #00FF41; color: #00FF41; background: #222; }
+  .btn-green:hover:not(:disabled) { background: #00FF41; color: #000; }
+  .btn-red { border-color: #FF003C; color: #FF003C; background: #222; }
+  .btn-red:hover:not(:disabled) { background: #FF003C; color: #000; }
+  .btn-yellow { border-color: #F5A623; color: #F5A623; background: #222; }
+  .btn-yellow:hover:not(:disabled) { background: #F5A623; color: #000; }
+
+  /* Diag */
+  .diag { background: #1A1A1A; border: 1px solid #333; border-radius: 8px; padding: 16px; margin: 16px 0; font-size: 0.75rem; color: #888; }
+  .diag-title { font-weight: bold; color: #E0E0E0; margin-bottom: 8px; }
+  .diag-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  @media (min-width: 640px) { .diag-grid { grid-template-columns: repeat(4, 1fr); } }
+
+  /* Info */
+  .info { background: #1A1A1A; border: 1px solid #333; border-radius: 8px; padding: 16px; margin: 16px 0; font-size: 0.75rem; color: #888; line-height: 1.6; }
+  .info b { color: #E0E0E0; }
+  .info ul { list-style: disc; padding-left: 16px; }
+  .info li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+    <div>
+      <h1>STW SENTINEL LAB</h1>
+      <div class="subtitle">Dual-Track Contrast — Main Thread vs AudioWorklet Isolation</div>
+    </div>
+    <div class="iso-badge">
+      <span class="dot" id="isoDot"></span>
+      <span id="isoText"></span>
+    </div>
+  </div>
+
+  <div class="status-grid">
+    <div class="status-card">
+      <div class="label">Worklet Δ</div>
+      <div class="value val-green" id="workletDelta">0.0 ms</div>
+    </div>
+    <div class="status-card">
+      <div class="label">Main Δ</div>
+      <div class="value val-yellow" id="mainDelta">0.0 ms</div>
+    </div>
+    <div class="status-card">
+      <div class="label">Main Peak</div>
+      <div class="value val-red" id="mainPeak">0.0 ms</div>
+    </div>
+    <div class="status-card">
+      <div class="label">STW Count</div>
+      <div class="value val-red" id="stwCount">0</div>
+    </div>
+    <div class="status-card">
+      <div class="label">Last STW</div>
+      <div class="value" style="color:#F5A623" id="lastSTW">--</div>
+    </div>
+    <div class="status-card">
+      <div class="label">Status</div>
+      <div class="value val-green" id="statusText">IDLE</div>
+    </div>
+  </div>
+
+  <div class="canvas-wrap">
+    <div class="canvas-header">
+      <span>Dual-Track Waveform</span>
+      <div class="legend">
+        <span class="g">■ Worklet</span>
+        <span class="y">■ Main Thread</span>
+        <span class="r">- - STW</span>
+      </div>
+    </div>
+    <canvas id="canvas" height="320"></canvas>
+  </div>
+
+  <div class="btn-group">
+    <button class="btn btn-green" id="btnStart">▶ Start Probe</button>
+    <button class="btn btn-yellow" id="btnSupernova">🌌 Supernova Bomb</button>
+    <button class="btn btn-red" id="btnStall">🔒 Stall Main Thread 200ms</button>
+  </div>
+
+  <div class="diag" id="diagPanel" style="display:none">
+    <div class="diag-title">📡 SAB Diagnostics</div>
+    <div class="diag-grid" id="diagGrid"></div>
+  </div>
+
+  <div class="info">
+    <b>🎯 Dual-Track Principle</b>
+    <ul>
+      <li><span style="color:#00FF41">Green (Worklet)</span> — AudioWorklet scheduling interval, driven by OS audio subsystem, ~2.67ms/frame</li>
+      <li><span style="color:#FFD700">Yellow (Main)</span> — Main thread rAF frame interval, normally ~16.6ms (60fps)</li>
+      <li><span style="color:#FF003C">Red dashed</span> — STW threshold 10ms, exceeding means V8 GC Stop-The-World</li>
+    </ul>
+  </div>
+
+  <div class="info">
+    <b>🔬 Expected Behavior</b>
+    <ul>
+      <li>🌌 Supernova: Yellow spikes to hundreds of ms, green stays flat — proves thread isolation</li>
+      <li>🔒 Main thread stall: Yellow vanishes for 200ms, green unaffected — lock-free proof</li>
+      <li>If green also spikes red, V8 triggered real STW — even Worklet was frozen</li>
+    </ul>
+  </div>
+</div>
+
+<script type="module">
+import { STWSentinel } from './packages/stw-sentinel/src/index.ts';
+
+const HISTORY_LEN = 200;
+let workletHistory = new Array(HISTORY_LEN).fill(0);
+let mainHistory = new Array(HISTORY_LEN).fill(0);
+let sentinel = null;
+let isRunning = false;
+let lastFrameTime = 0;
+let peakMain = 0;
+let stwCount = 0;
+let animId = 0;
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// Resize
+function resize() {
+  canvas.width = canvas.parentElement.clientWidth;
+  canvas.height = 320;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Isolation badge
+const isolated = window.crossOriginIsolated === true;
+document.getElementById('isoDot').className = `dot ${isolated ? 'dot-green' : 'dot-red'}`;
+document.getElementById('isoText').textContent = `crossOriginIsolated: ${isolated}`;
+
+// Draw
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = '#050505';
+  ctx.fillRect(0, 0, W, H);
+
+  const maxMs = Math.max(60, ...workletHistory.slice(-50), ...mainHistory.slice(-50));
+  const yScale = (H - 40) / maxMs;
+  const step = (W - 50) / (HISTORY_LEN - 1);
+
+  // Grid
+  ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1;
+  for (let ms = 0; ms <= maxMs; ms += ms > 200 ? 100 : 10) {
+    const y = H - 20 - ms * yScale;
+    if (y < 20) break;
+    ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(W - 10, y); ctx.stroke();
+    ctx.fillStyle = '#555'; ctx.font = '10px monospace';
+    ctx.fillText(`${ms}ms`, 0, y + 3);
+  }
+
+  // STW threshold
+  const threshY = H - 20 - 10 * yScale;
+  if (threshY > 20) {
+    ctx.strokeStyle = '#FF003C44'; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(40, threshY); ctx.lineTo(W - 10, threshY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#FF003C'; ctx.font = '9px monospace';
+    ctx.fillText('STW 10ms', W - 70, threshY - 4);
+  }
+
+  // Main thread (yellow)
+  ctx.beginPath(); ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1.5;
+  for (let i = 0; i < mainHistory.length; i++) {
+    const x = 40 + i * step, y = H - 20 - Math.min(mainHistory[i], maxMs) * yScale;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Main spikes
+  for (let i = 0; i < mainHistory.length; i++) {
+    if (mainHistory[i] > 16.6) {
+      const x = 40 + i * step, y = H - 20 - Math.min(mainHistory[i], maxMs) * yScale;
+      ctx.fillStyle = mainHistory[i] > 100 ? '#FF003C' : '#F5A623';
+      ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // Worklet (green)
+  ctx.beginPath(); ctx.strokeStyle = '#00FF41'; ctx.lineWidth = 1.5;
+  for (let i = 0; i < workletHistory.length; i++) {
+    const x = 40 + i * step, y = H - 20 - Math.min(workletHistory[i], maxMs) * yScale;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Worklet spikes
+  for (let i = 0; i < workletHistory.length; i++) {
+    if (workletHistory[i] > 10) {
+      const x = 40 + i * step, y = H - 20 - Math.min(workletHistory[i], maxMs) * yScale;
+      ctx.fillStyle = '#FF003C'; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+}
+
+// Poll loop
+function poll() {
+  const now = performance.now();
+
+  // Main thread heartbeat
+  if (lastFrameTime > 0) {
+    const fd = now - lastFrameTime;
+    mainHistory.push(fd);
+    if (mainHistory.length > HISTORY_LEN) mainHistory.shift();
+    document.getElementById('mainDelta').textContent = fd.toFixed(1) + ' ms';
+    if (fd > peakMain) { peakMain = fd; document.getElementById('mainPeak').textContent = fd.toFixed(1) + ' ms'; }
+  }
+  lastFrameTime = now;
+
+  // Worklet drain
+  if (sentinel) {
+    const entries = sentinel.drain();
+    for (const e of entries) {
+      const dMs = e.deltaNs / 1_000_000;
+      workletHistory.push(dMs);
+      if (workletHistory.length > HISTORY_LEN) workletHistory.shift();
+      document.getElementById('workletDelta').textContent = dMs.toFixed(1) + ' ms';
+
+      if (dMs > 10) { stwCount++; document.getElementById('stwCount').textContent = stwCount; document.getElementById('lastSTW').textContent = dMs.toFixed(1) + 'ms'; }
+    }
+  }
+
+  draw();
+  animId = requestAnimationFrame(poll);
+}
+
+// Start
+document.getElementById('btnStart').addEventListener('click', async () => {
+  if (!isolated) { alert('crossOriginIsolated is false. Enable COOP/COEP headers.'); return; }
+  sentinel = new STWSentinel({ thresholdMs: 10, processorUrl: '/processor.js' });
+  await sentinel.init();
+  isRunning = true;
+  lastFrameTime = performance.now();
+  peakMain = 0; stwCount = 0;
+  workletHistory = new Array(HISTORY_LEN).fill(0);
+  mainHistory = new Array(HISTORY_LEN).fill(0);
+  document.getElementById('statusText').textContent = 'ONLINE';
+  document.getElementById('btnStart').textContent = '■ Stop';
+  poll();
+});
+
+// Supernova bomb
+function triggerSupernova() {
+  console.log('🌌 Supernova: V8 hidden class pollution + write barrier overload...');
+  let chaotic = [];
+  for (let i = 0; i < 500000; i++) {
+    let obj = {};
+    obj['prop_' + Math.floor(Math.random() * 100000)] = new Array(5).fill(Math.random());
+    chaotic.push(obj);
+  }
+  let oldGen = new Array(1000000).fill(null).map((_, idx) => ({ id: idx, ref: null }));
+  console.log('⚔️ Write barrier overload: 10M mutations...');
+  for (let i = 0; i < 10000000; i++) {
+    oldGen[Math.floor(Math.random() * 1000000)].ref = chaotic[Math.floor(Math.random() * 500000)];
+  }
+  setTimeout(() => {
+    chaotic = []; oldGen = [];
+    const _blow = new Array(15000000).fill('boom').join('');
+    console.log('💣 Supernova deployed.');
+  }, 50);
+}
+document.getElementById('btnSupernova').addEventListener('click', () => { if (isRunning) triggerSupernova(); });
+
+// Stall
+document.getElementById('btnStall').addEventListener('click', () => {
+  if (!isRunning) return;
+  const start = performance.now();
+  while (performance.now() - start < 200) {}
+  console.log('🔒 Main thread stall: 200ms');
+});
+
+// Draw idle
+draw();
+</script>
+</body>
+</html>

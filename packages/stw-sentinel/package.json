@@ -1,0 +1,21 @@
+{
+  "name": "stw-sentinel",
+  "version": "1.0.0",
+  "description": "A lock-free WebAudio APM probe to detect V8 GC Stop-The-World events.",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.2"
+  }
+}
