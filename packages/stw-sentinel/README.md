@@ -1,4 +1,4 @@
-# @kerri-audio/stw-sentinel
+# stw-sentinel
 
 A lock-free AudioWorklet probe to detect V8 GC Stop-The-World events in real-time.
 
@@ -17,7 +17,7 @@ Traditional performance monitoring tools (like `requestAnimationFrame` hooks) ru
 ## Installation
 
 ```bash
-npm install @kerri-audio/stw-sentinel
+npm install stw-sentinel
 ```
 
 ## Server Configuration (CRITICAL)
@@ -52,7 +52,7 @@ Verify with `self.crossOriginIsolated === true` in your browser console.
 ## Usage
 
 ```typescript
-import { STWSentinel } from '@kerri-audio/stw-sentinel';
+import { STWSentinel } from 'stw-sentinel';
 
 // Initialize the sentinel (call after user gesture, e.g. button click)
 const sentinel = new STWSentinel({

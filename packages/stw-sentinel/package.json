@@ -1,19 +1,49 @@
 {
   "name": "stw-sentinel",
-  "version": "1.0.0",
-  "description": "A lock-free WebAudio APM probe to detect V8 GC Stop-The-World events.",
+  "version": "1.1.0",
+  "description": "A lock-free AudioWorklet probe to detect V8 GC Stop-The-World events via SharedArrayBuffer + Atomics.",
   "main": "dist/index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsup src/index.ts --format cjs,esm --dts",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --watch"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./processor": "./public/processor.js"
+  },
+  "files": [
+    "dist",
+    "public",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "v8",
+    "gc",
+    "stop-the-world",
+    "audioworklet",
+    "sharedarraybuffer",
+    "atomics",
+    "performance",
+    "apm",
+    "monitoring",
+    "latency",
+    "jank"
+  ],
+  "author": "Kerri Zhang",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kerri-audio/stw-sentinel"
+  },
+  "homepage": "https://diffserv.xyz/lab",
+  "type": "commonjs",
   "devDependencies": {
     "tsup": "^8.5.1",
     "typescript": "^6.0.2"
