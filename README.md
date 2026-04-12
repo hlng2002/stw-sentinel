@@ -60,25 +60,25 @@ add_header Cross-Origin-Embedder-Policy "require-corp" always;
 import { STWSentinel } from 'stw-sentinel';
 
 const sentinel = new STWSentinel({
-  bufferSize: 4096,       // SharedArrayBuffer 容量
-  thresholdMs: 10,        // 超过 10ms 判定为 STW 尖峰
-  processorUrl: '/processor.js'  // processor 文件路径
+  thresholdMs: 10,              // 超过 10ms 判定为 STW 尖峰
+  processorUrl: '/processor.js', // processor 文件路径
+  onSpike: (deltaMs) => {       // STW 尖峰回调
+    console.warn(`🔥 STW 尖峰: ${deltaMs.toFixed(2)}ms`);
+  }
 });
 
+// 初始化（必须在用户手势后调用，如按钮点击）
 await sentinel.init();
-sentinel.start();
 
-// 在主线程轮询数据
-function poll() {
-  const entries = sentinel.drain();
-  for (const { time, deltaMs } of entries) {
-    if (deltaMs > 10) {
-      console.warn(`🔥 STW 尖峰: ${deltaMs}ms`);
-    }
-  }
-  requestAnimationFrame(poll);
+// 主动读取环形缓冲区数据
+const entries = sentinel.drain();
+for (const { timestampNs, deltaNs } of entries) {
+  const deltaMs = deltaNs / 1_000_000;
+  console.log(`Worklet Δ: ${deltaMs.toFixed(2)}ms`);
 }
-poll();
+
+// 停止监控
+sentinel.stop();
 ```
 
 ### 🧠 内存布局
@@ -145,25 +145,25 @@ add_header Cross-Origin-Embedder-Policy "require-corp" always;
 import { STWSentinel } from 'stw-sentinel';
 
 const sentinel = new STWSentinel({
-  bufferSize: 4096, // Capacity of the SharedArrayBuffer
-  thresholdMs: 10,  // Trigger STW alert if delta exceeds 10ms
-  processorUrl: '/processor.js' // Path to your served processor file
+  thresholdMs: 10,               // Trigger STW alert if delta exceeds 10ms
+  processorUrl: '/processor.js',  // Path to your served processor file
+  onSpike: (deltaMs) => {        // Callback when STW spike is detected
+    console.warn(`🔥 STW Spike Detected: ${deltaMs.toFixed(2)}ms`);
+  }
 });
 
+// Initialize (must be called after user gesture, e.g. button click)
 await sentinel.init();
-sentinel.start();
 
-// Drain data in main thread
-function poll() {
-  const entries = sentinel.drain();
-  for (const { time, deltaMs } of entries) {
-    if (deltaMs > 10) {
-      console.warn(`🔥 STW Spike Detected: ${deltaMs}ms`);
-    }
-  }
-  requestAnimationFrame(poll);
+// Drain all available entries from the ring buffer
+const entries = sentinel.drain();
+for (const { timestampNs, deltaNs } of entries) {
+  const deltaMs = deltaNs / 1_000_000;
+  console.log(`Worklet Δ: ${deltaMs.toFixed(2)}ms`);
 }
-poll();
+
+// Stop monitoring
+sentinel.stop();
 ```
 
 ### 🧠 Architecture: Memory Layout
