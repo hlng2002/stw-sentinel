@@ -2,3 +2,19 @@ node_modules/
 .vercel/
 dist/
 .DS_Store
+
+# Internal notes / AI agent files — never commit
+CLAUDE.md
+MARKETING.md
+POV_TWEETS.md
+input.md
+.codebuddy/
+
+# Root-level dev/demo files — package lives in packages/stw-sentinel/
+/package.json
+/package-lock.json
+/dev-server.js
+/index.html
+/processor.js
+/vercel.json
+/.vercelignore
