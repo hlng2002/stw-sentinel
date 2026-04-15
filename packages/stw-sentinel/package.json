@@ -40,7 +40,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kerri-audio/stw-sentinel"
+    "url": "https://github.com/hlng2002/stw-sentinel"
   },
   "homepage": "https://diffserv.xyz/lab",
   "type": "commonjs",
